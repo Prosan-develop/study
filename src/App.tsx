@@ -18,8 +18,11 @@ import { StickerBook } from './components/StickerBook';
 import { DailyStreakModal } from './components/DailyStreakModal';
 import { SettingsModal } from './components/SettingsModal';
 import { AvatarShopModal } from './components/AvatarShopModal';
+import { LearningStatsModal } from './components/LearningStatsModal';
+import { CelebrationModal, CelebrationData } from './components/CelebrationModal';
 import { RewardParticlePop } from './components/RewardParticlePop';
 import { sound, AudioSettings } from './utils/audio';
+import { triggerParticleExplosion } from './utils/particles';
 import {
   initDailyStreak,
   saveStreakState,
@@ -39,6 +42,11 @@ import {
   DEFAULT_AVATAR_CONFIG,
   DEFAULT_OWNED_ITEMS,
 } from './utils/avatarShop';
+import {
+  loadLearningStats,
+  recordGameCompletion,
+  DayActivityLog,
+} from './utils/learningStats';
 
 const STORAGE_KEY = 'khmer_kids_learning_progress_v1';
 
@@ -75,7 +83,15 @@ export default function App() {
   // Weekly Challenge State
   const [weeklyChallenge, setWeeklyChallenge] = useState<WeeklyChallenge>(DEFAULT_WEEKLY_CHALLENGE);
 
-  // Initialize progress, daily streak, weekly challenge, and avatar on app load
+  // Learning Statistics State (7-Day Recharts data)
+  const [statsData, setStatsData] = useState<DayActivityLog[]>([]);
+  const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
+
+  // Difficult Level Celebration Modal State
+  const [celebrationData, setCelebrationData] = useState<CelebrationData | null>(null);
+  const [isCelebrationOpen, setIsCelebrationOpen] = useState(false);
+
+  // Initialize progress, daily streak, weekly challenge, avatar, and learning stats on app load
   useEffect(() => {
     // 1. Load general progress
     try {
@@ -103,6 +119,9 @@ export default function App() {
     // 5. Load Avatar Config & Owned Items
     setAvatarConfig(loadAvatarConfig());
     setOwnedAvatarItems(loadOwnedItems());
+
+    // 6. Load 7-Day Learning Activity Stats
+    setStatsData(loadLearningStats());
 
     // If logging in on a new day or haven't claimed today's reward, welcome them with the streak modal!
     if (isNewDayLogin && !initialStreak.hasClaimedToday) {
@@ -286,11 +305,19 @@ export default function App() {
     setStreakState(nextStreak);
     saveStreakState(nextStreak);
 
-    // Track weekly challenge if playing math/number game or stage
+    // Identify math vs letters
     const isMathStage =
       currentCategory === 'numbers' ||
-      (activeStage && (activeStage.gameType === 'count' || activeStage.gameType === 'sequence' || activeStage.gameType === 'math'));
+      (activeStage &&
+        (activeStage.gameType === 'count' ||
+          activeStage.gameType === 'sequence' ||
+          activeStage.gameType === 'math'));
 
+    // 1. Log game completion to 7-Day Learning Activity Tracker
+    const updatedStats = recordGameCompletion(isMathStage ? 'math' : 'letters', starsEarned);
+    setStatsData([...updatedStats]);
+
+    // 2. Track weekly challenge if playing math/number game or stage
     if (isMathStage) {
       const { updated, newlyCompleted } = recordChallengeProgress(weeklyChallenge, 'math_levels', 1);
       setWeeklyChallenge(updated);
@@ -299,6 +326,7 @@ export default function App() {
       }
     }
 
+    // 3. Update total stars and stage progression
     if (activeStage) {
       const prevStarsForStage = completedStages[activeStage.id] || 0;
       const stageId = activeStage.id;
@@ -316,6 +344,55 @@ export default function App() {
       const newTotalStars = totalStars + starsEarned;
       setTotalStars(newTotalStars);
       saveProgress(newTotalStars, completedStages, unlockedStickers);
+    }
+
+    // 4. Trigger Celebration Modal with custom congratulatory messages and animated trophy for difficult/milestone levels
+    const stageDifficulty = activeStage
+      ? activeStage.world === 3 ||
+        activeStage.gameType === 'math' ||
+        activeStage.gameType === 'word_build'
+        ? 3
+        : activeStage.world === 2 ||
+          activeStage.gameType === 'sequence' ||
+          activeStage.gameType === 'letter_match'
+        ? 2
+        : 1
+      : 2;
+
+    const isDifficult = Boolean(
+      (activeStage &&
+        (activeStage.world >= 2 ||
+          activeStage.id >= 3 ||
+          stageDifficulty >= 2)) ||
+      starsEarned >= 2 ||
+      currentCategory === 'memory' ||
+      currentCategory === 'tracing'
+    );
+
+    if (isDifficult) {
+      const celebrationPayload: CelebrationData = {
+        stageId: activeStage?.id,
+        stageTitleKm:
+          activeStage?.titleKm ||
+          (isMathStage ? 'កម្រិតគណិតវិទ្យា & រាប់លេខ' : 'កម្រិតអក្សរ & ពាក្យ'),
+        stageTitleEn:
+          activeStage?.titleEn ||
+          (isMathStage ? 'Math & Numbers Challenge' : 'Phonics & Letters Quest'),
+        worldNumber: activeStage?.world || (isMathStage ? 1 : 2),
+        levelDifficulty: stageDifficulty,
+        starsEarned,
+        bonusCoins,
+      };
+
+      setCelebrationData(celebrationPayload);
+      setIsCelebrationOpen(true);
+      sound.playVictoryFanfare();
+
+      triggerParticleExplosion({
+        type: 'mixed',
+        particleCount: 110,
+        origin: { x: 0.5, y: 0.45 },
+      });
     }
   };
 
@@ -342,6 +419,11 @@ export default function App() {
         onOpenSettingsModal={() => {
           sound.playClick();
           setIsSettingsModalOpen(true);
+        }}
+        onOpenStatsModal={() => {
+          sound.playClick();
+          setStatsData(loadLearningStats());
+          setIsStatsModalOpen(true);
         }}
         totalStars={totalStars}
         currentStreak={streakState.currentStreak}
@@ -470,6 +552,29 @@ export default function App() {
       {/* Floating Reward Particle Burst Overlay */}
       <RewardParticlePop />
 
+      {/* 7-Day Learning Activity Progress & Recharts Analytics Modal for Parents */}
+      <LearningStatsModal
+        isOpen={isStatsModalOpen}
+        onClose={() => setIsStatsModalOpen(false)}
+        language={language}
+        statsData={statsData}
+      />
+
+      {/* Level Complete / Difficult Stage Celebration Modal with Animated Trophy */}
+      <CelebrationModal
+        isOpen={isCelebrationOpen}
+        onClose={() => setIsCelebrationOpen(false)}
+        language={language}
+        data={celebrationData}
+        onContinue={() => {
+          setIsCelebrationOpen(false);
+          handleBackToMap();
+        }}
+        onReplay={() => {
+          setIsCelebrationOpen(false);
+        }}
+      />
+
       {/* Footer */}
       <footer className="border-t border-amber-200/50 py-4 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
@@ -479,6 +584,17 @@ export default function App() {
               : 'SmartKids Learning Adventure · Letters & Numbers'}
           </p>
           <div className="flex items-center gap-3 text-slate-500">
+            <button
+              onClick={() => {
+                sound.playClick();
+                setStatsData(loadLearningStats());
+                setIsStatsModalOpen(true);
+              }}
+              className="hover:text-amber-700 transition-colors cursor-pointer"
+            >
+              {language === 'km' ? 'ស្ថិតិនៃការសិក្សា 📊' : 'Learning Stats 📊'}
+            </button>
+            <span>·</span>
             <span>{language === 'km' ? 'ហាងតួអង្គ 🛍️' : 'Avatar Shop 🛍️'}</span>
             <span>·</span>
             <span>{language === 'km' ? 'បេសកកម្មប្រចាំសប្តាហ៍ 🎯' : 'Weekly Quest 🎯'}</span>

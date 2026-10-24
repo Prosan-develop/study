@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings } from 'lucide-react';
+import { Settings, BarChart2 } from 'lucide-react';
 import { GameCategory, Language, AvatarConfig } from '../types';
 import { StreakFlameIcon, VirtualCoinIcon } from './CuteIcons';
 import { CustomAvatar } from './CustomAvatar';
@@ -13,6 +13,7 @@ interface HeaderProps {
   audioSettings: AudioSettings;
   onToggleSound: () => void;
   onOpenSettingsModal: () => void;
+  onOpenStatsModal?: () => void;
   totalStars: number;
   currentStreak: number;
   virtualCoins: number;
@@ -29,6 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleLanguage,
   audioSettings,
   onOpenSettingsModal,
+  onOpenStatsModal,
   totalStars,
   currentStreak,
   virtualCoins,
@@ -182,6 +184,18 @@ export const Header: React.FC<HeaderProps> = ({
               🛍️
             </span>
           </button>
+
+          {/* Learning Statistics for Parents & Kids */}
+          {onOpenStatsModal && (
+            <button
+              onClick={onOpenStatsModal}
+              aria-label="Learning Statistics"
+              className="p-1.5 sm:p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-amber-100/50 transition-colors cursor-pointer relative"
+              title={isKm ? 'ស្ថិតិនៃការសិក្សា ៧ ថ្ងៃ (Learning Stats)' : '7-Day Learning Progress & Charts'}
+            >
+              <BarChart2 className="w-5 h-5 text-amber-700" />
+            </button>
+          )}
 
           {/* Settings Menu Trigger */}
           <button
