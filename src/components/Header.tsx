@@ -1,7 +1,8 @@
 import React from 'react';
-import { Volume2, VolumeX, Settings, Music } from 'lucide-react';
-import { GameCategory, Language } from '../types';
+import { Settings } from 'lucide-react';
+import { GameCategory, Language, AvatarConfig } from '../types';
 import { StreakFlameIcon, VirtualCoinIcon } from './CuteIcons';
+import { CustomAvatar } from './CustomAvatar';
 import { AudioSettings } from '../utils/audio';
 
 interface HeaderProps {
@@ -17,6 +18,8 @@ interface HeaderProps {
   virtualCoins: number;
   hasClaimedToday: boolean;
   onOpenStreakModal: () => void;
+  avatarConfig: AvatarConfig;
+  onOpenAvatarShop: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -25,22 +28,22 @@ export const Header: React.FC<HeaderProps> = ({
   language,
   onToggleLanguage,
   audioSettings,
-  onToggleSound,
   onOpenSettingsModal,
   totalStars,
   currentStreak,
   virtualCoins,
   hasClaimedToday,
   onOpenStreakModal,
+  avatarConfig,
+  onOpenAvatarShop,
 }) => {
   const isKm = language === 'km';
-  const isSoundActive = (audioSettings.sfxEnabled || audioSettings.musicEnabled) && audioSettings.volume > 0;
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-amber-200/70 shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3 md:gap-8">
         
-        {/* Zone 1: Single text wordmark */}
+        {/* Zone 1: Single text wordmark with mini logo */}
         <button
           onClick={() => onSelectCategory('adventure')}
           className="flex items-center gap-2.5 text-left group whitespace-nowrap shrink-0 cursor-pointer"
@@ -151,14 +154,14 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           {/* Virtual Coins Counter */}
-          <div
-            onClick={onOpenStreakModal}
-            className="flex items-center gap-1 text-amber-800 font-bold text-xs sm:text-sm tabular-nums cursor-pointer hover:opacity-85 transition-opacity"
-            title={isKm ? 'កាក់ប្រាក់និម្មិត' : 'Virtual Coins'}
+          <button
+            onClick={onOpenAvatarShop}
+            className="flex items-center gap-1 text-amber-800 font-bold text-xs sm:text-sm tabular-nums cursor-pointer hover:opacity-85 transition-opacity px-2 py-1 rounded-lg hover:bg-amber-100/60"
+            title={isKm ? 'កាក់មាសរបស់អ្នក (ចុចទៅហាងតួអង្គ)' : 'Your Coins (Click for Avatar Shop)'}
           >
             <VirtualCoinIcon size={18} />
             <span>{virtualCoins}</span>
-          </div>
+          </button>
 
           {/* Star counter */}
           <div className="flex items-center gap-1 text-amber-700 font-bold text-xs sm:text-sm tabular-nums hidden sm:flex">
@@ -167,6 +170,18 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="h-4 w-[1px] bg-slate-200 hidden sm:block" />
+
+          {/* Custom Profile Avatar Button (Click to open Avatar Shop) */}
+          <button
+            onClick={onOpenAvatarShop}
+            className="relative p-0.5 rounded-full ring-2 ring-amber-300 hover:ring-amber-500 bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-xs"
+            title={isKm ? 'ហាងតុបតែងតួអង្គ (Avatar Shop)' : 'Avatar Shop & Wardrobe'}
+          >
+            <CustomAvatar config={avatarConfig} size={34} />
+            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-amber-400 border border-white flex items-center justify-center text-[9px] text-amber-950 font-bold shadow-2xs">
+              🛍️
+            </span>
+          </button>
 
           {/* Settings Menu Trigger */}
           <button

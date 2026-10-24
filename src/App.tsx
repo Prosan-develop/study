@@ -6,6 +6,7 @@ import {
   DifficultyLevel,
   DailyStreakState,
   WeeklyChallenge,
+  AvatarConfig,
 } from './types';
 import { Header } from './components/Header';
 import { AdventureMap } from './components/AdventureMap';
@@ -16,6 +17,7 @@ import { TracingCanvas } from './components/TracingCanvas';
 import { StickerBook } from './components/StickerBook';
 import { DailyStreakModal } from './components/DailyStreakModal';
 import { SettingsModal } from './components/SettingsModal';
+import { AvatarShopModal } from './components/AvatarShopModal';
 import { RewardParticlePop } from './components/RewardParticlePop';
 import { sound, AudioSettings } from './utils/audio';
 import {
@@ -29,6 +31,14 @@ import {
   recordChallengeProgress,
   DEFAULT_WEEKLY_CHALLENGE,
 } from './utils/weeklyChallenge';
+import {
+  loadAvatarConfig,
+  saveAvatarConfig,
+  loadOwnedItems,
+  saveOwnedItems,
+  DEFAULT_AVATAR_CONFIG,
+  DEFAULT_OWNED_ITEMS,
+} from './utils/avatarShop';
 
 const STORAGE_KEY = 'khmer_kids_learning_progress_v1';
 
@@ -40,6 +50,11 @@ export default function App() {
   const [audioSettings, setAudioSettings] = useState<AudioSettings>(sound.getSettings());
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   
+  // Avatar Profile & Shop State
+  const [avatarConfig, setAvatarConfig] = useState<AvatarConfig>(DEFAULT_AVATAR_CONFIG);
+  const [ownedAvatarItems, setOwnedAvatarItems] = useState<string[]>(DEFAULT_OWNED_ITEMS);
+  const [isAvatarShopOpen, setIsAvatarShopOpen] = useState(false);
+
   // Game progress state
   const [totalStars, setTotalStars] = useState(0);
   const [completedStages, setCompletedStages] = useState<Record<number, number>>({});
@@ -60,7 +75,7 @@ export default function App() {
   // Weekly Challenge State
   const [weeklyChallenge, setWeeklyChallenge] = useState<WeeklyChallenge>(DEFAULT_WEEKLY_CHALLENGE);
 
-  // Initialize progress, daily streak, and weekly challenge on app load
+  // Initialize progress, daily streak, weekly challenge, and avatar on app load
   useEffect(() => {
     // 1. Load general progress
     try {
@@ -84,6 +99,10 @@ export default function App() {
 
     // 4. Load Audio Settings
     setAudioSettings(sound.getSettings());
+
+    // 5. Load Avatar Config & Owned Items
+    setAvatarConfig(loadAvatarConfig());
+    setOwnedAvatarItems(loadOwnedItems());
 
     // If logging in on a new day or haven't claimed today's reward, welcome them with the streak modal!
     if (isNewDayLogin && !initialStreak.hasClaimedToday) {
@@ -131,6 +150,30 @@ export default function App() {
     const nextLang = language === 'km' ? 'en' : 'km';
     setLanguage(nextLang);
     sound.playClick();
+  };
+
+  // Avatar Shop Handlers
+  const handleUpdateAvatarConfig = (newConfig: AvatarConfig) => {
+    setAvatarConfig(newConfig);
+    saveAvatarConfig(newConfig);
+  };
+
+  const handleDeductCoins = (amount: number) => {
+    const updatedCoins = Math.max(0, streakState.virtualCoins - amount);
+    const nextStreakState: DailyStreakState = {
+      ...streakState,
+      virtualCoins: updatedCoins,
+    };
+    setStreakState(nextStreakState);
+    saveStreakState(nextStreakState);
+  };
+
+  const handleAddOwnedAvatarItem = (itemId: string) => {
+    if (!ownedAvatarItems.includes(itemId)) {
+      const updated = [...ownedAvatarItems, itemId];
+      setOwnedAvatarItems(updated);
+      saveOwnedItems(updated);
+    }
   };
 
   // Claim Daily Streak Reward
@@ -284,7 +327,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-amber-50/40">
-      {/* Top Header Contract with Streak Flame, Virtual Coins & Settings Modal trigger */}
+      {/* Top Header Contract with Custom Avatar, Streak Flame, Virtual Coins & Settings Modal trigger */}
       <Header
         currentCategory={currentCategory}
         onSelectCategory={(cat) => {
@@ -307,6 +350,11 @@ export default function App() {
         onOpenStreakModal={() => {
           sound.playClick();
           setIsStreakModalOpen(true);
+        }}
+        avatarConfig={avatarConfig}
+        onOpenAvatarShop={() => {
+          sound.playClick();
+          setIsAvatarShopOpen(true);
         }}
       />
 
@@ -406,6 +454,19 @@ export default function App() {
         onUpdateSettings={handleUpdateAudioSettings}
       />
 
+      {/* Avatar Shop & Wardrobe Modal */}
+      <AvatarShopModal
+        isOpen={isAvatarShopOpen}
+        onClose={() => setIsAvatarShopOpen(false)}
+        avatarConfig={avatarConfig}
+        onUpdateAvatarConfig={handleUpdateAvatarConfig}
+        virtualCoins={streakState.virtualCoins}
+        onDeductCoins={handleDeductCoins}
+        ownedItemIds={ownedAvatarItems}
+        onAddOwnedItem={handleAddOwnedAvatarItem}
+        language={language}
+      />
+
       {/* Floating Reward Particle Burst Overlay */}
       <RewardParticlePop />
 
@@ -418,11 +479,11 @@ export default function App() {
               : 'SmartKids Learning Adventure · Letters & Numbers'}
           </p>
           <div className="flex items-center gap-3 text-slate-500">
+            <span>{language === 'km' ? 'ហាងតួអង្គ 🛍️' : 'Avatar Shop 🛍️'}</span>
+            <span>·</span>
             <span>{language === 'km' ? 'បេសកកម្មប្រចាំសប្តាហ៍ 🎯' : 'Weekly Quest 🎯'}</span>
             <span>·</span>
             <span>{language === 'km' ? 'វត្តមានជាប់គ្នា 🔥' : 'Daily Streak 🔥'}</span>
-            <span>·</span>
-            <span>{language === 'km' ? 'ភាសាខ្មែរ & English' : 'Khmer & English'}</span>
             <span>·</span>
             <span>{language === 'km' ? '១២ កម្រិតបន្តបន្ទាប់' : '12 Progressive Levels'}</span>
           </div>

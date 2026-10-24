@@ -81,6 +81,29 @@ export interface WeeklyChallenge {
   icon: string;
 }
 
+export type AvatarSkinColor = 'blue' | 'pink' | 'golden' | 'green' | 'purple' | 'orange';
+export type AvatarHeadwear = 'safari_hat' | 'crown' | 'wizard_hat' | 'party_hat' | 'flower' | 'none';
+export type AvatarEyewear = 'none' | 'cool_glasses' | 'star_glasses' | 'smart_glasses';
+export type AvatarBadge = 'rosy_cheeks' | 'sparkle_stars' | 'heart' | 'gold_medal';
+
+export interface AvatarConfig {
+  skinColor: AvatarSkinColor;
+  headwear: AvatarHeadwear;
+  eyewear: AvatarEyewear;
+  badge: AvatarBadge;
+}
+
+export interface ShopItem {
+  id: string;
+  category: 'skin' | 'headwear' | 'eyewear' | 'badge';
+  key: string;
+  nameKm: string;
+  nameEn: string;
+  icon: string;
+  cost: number;
+  previewColor?: string;
+}
+
 export interface UserProgress {
   totalStars: number;
   completedStages: Record<number, number>; // stageId -> stars earned (1-3)
