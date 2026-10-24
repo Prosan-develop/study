@@ -1,0 +1,6 @@
+{
+  "name": "Khmer & English Kids Learning Adventure",
+  "description": "ល្បែងសិក្សាអប់រំកុមាររីករាយ រៀនអក្សរ លេខ រាប់ចំនួន បូកដក និងហាត់គូរសរសេរ ជាមួយកម្រិតលំបាកកើនឡើងជាបន្តបន្ទាប់ សម្លេងពីរោះ និងរង្វាន់ផ្កាយលើកទឹកចិត្ត",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
